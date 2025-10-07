@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+        <title>Lokasi Bangunan Pondok Pesantren Al-Munawwir</title>
+        
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        
+        <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
+        <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css' rel='stylesheet' />
+
+        <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.1/mapbox-gl-directions.js"></script>
+        <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.1/mapbox-gl-directions.css" type="text/css">
+        
+        <style>
+            body {
+                font-family: 'Poppins', sans-serif;
+            }
+            #map {
+                height: 600px;
+                width: 100%;
+            }
+            .mapboxgl-popup-content {
+                font-weight: bold;
+            }
+            .custom-button {
+                position: absolute;
+                top: 52px;
+                left: 10px;
+                z-index: 1;
+                background-color: #d9534f;
+                color: white;
+                padding: 6px 12px;
+                border: none;
+                border-radius: 4px;
+                font-size: 14px;
+                cursor: pointer;
+            }
+            #legend {
+                position: absolute;
+                bottom: 30px;
+                left: 10px;
+                background-color: white;
+                padding: 10px;
+                border-radius: 5px;
+                border: 1px solid #ccc;
+                z-index: 1;
+                font-size: 12px;
+            }
+            #legend h4 {
+                margin: 0 0 5px 0;
+                font-size: 14px;
+            }
+            #legend div span {
+                display: inline-block;
+                width: 15px;
+                height: 15px;
+                margin-right: 5px;
+                vertical-align: middle;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container-fluid mt-3">
+            <div class="row">
+                <div class="col-lg-3">
+                    <div class="card">
+                        <div class="card-header fw-bold">Petunjuk</div>
+                        <div class="card-body">
+                           <p>1. Gunakan tombol zoom in (+), zoom out (-), dan reset bearing to north (panah) untuk mengatur posisi peta.</p>
+                           <p>2. Titik biru bertuliskan huruf "A" merupakan titik lokasi Anda.</p>
+                           <p>3. Klik tombol <span class="badge bg-danger">Lokasi Pesantren</span> untuk menampilkan lokasi Pondok Pesantren Al-Munawwir.</p>
+                           <p>4. Klik salah satu bangunan sebagai tujuan destinasi.</p>
+                           <p>5. Rute ditampilkan sebagai garis biru pada peta.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-9">
+                    <div style="position: relative;">
+                        <div id='map'></div>
+                        <button id='fly' class="custom-button">Lokasi Pesantren</button>
+                        <div id="legend">
+                            <h4>Legenda</h4>
+                            <div><span style="background-color: #1e3d59;"></span>Asrama Putra</div>
+                            <div><span style="background-color: #ff69b4;"></span>Asrama Putri</div>
+                            <div><span style="background-color: #ffd700;"></span>Bangunan Umum</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // GANTI DENGAN TOKEN MAPBOX ANDA JIKA PERLU
+            mapboxgl.accessToken = 'pk.eyJ1IjoiZGltYXJsYWtzb25vIiwiYSI6ImNtYjZobTFoNzAxNXIyanNocXBmbXd5cWoifQ.navtVBVpp-0LhiLj8Dw65Q';
+
+            const end = {
+                center: [110.3609, -7.8255],
+                zoom: 17,
+            };
+
+            const map = new mapboxgl.Map({
+                container: 'map',
+                style: 'mapbox://styles/mapbox/streets-v11',
+                center: end.center,
+                zoom: end.zoom
+            });
+            
+            const directions = new MapboxDirections({
+                accessToken: mapboxgl.accessToken,
+                unit: 'metric',
+                profile: 'mapbox/walking',
+                language: 'id',
+                interactive: false // Menonaktifkan input manual agar hanya bisa diklik dari peta
+            });
+            
+            map.addControl(new mapboxgl.FullscreenControl(), 'top-left');
+            map.addControl(directions, 'top-right');
+            map.addControl(new mapboxgl.NavigationControl(), 'top-left');
+
+            map.on('load', () => {
+                // Mencoba mendapatkan lokasi pengguna saat peta dimuat
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(position => {
+                        const userLocation = [position.coords.longitude, position.coords.latitude];
+                        directions.setOrigin(userLocation);
+                        
+                        // Menambahkan marker biru untuk lokasi pengguna
+                        new mapboxgl.Marker({color: '#007cff'})
+                            .setLngLat(userLocation)
+                            .setPopup(new mapboxgl.Popup().setText("Lokasi Anda"))
+                            .addTo(map);
+
+                    }, () => {
+                        console.log("Akses lokasi ditolak atau tidak tersedia.");
+                    });
+                }
+                
+                // DATA SUMBER DARI FOLDER assets/geojson/
+                const sources = {
+                    'asrama_putra': { color: '#1e3d59', data: 'assets/geojson/asrama_putra.geojson' },
+                    'asrama_putri': { color: '#ff69b4', data: 'assets/geojson/asrama_putri.geojson' },
+                    'bangunan_umum': { color: '#ffd700', data: 'assets/geojson/bangunan_umum.geojson' }
+                };
+
+                for (const id in sources) {
+                    map.addSource(id, {
+                        type: 'geojson',
+                        data: sources[id].data
+                    });
+
+                    map.addLayer({
+                        'id': id + '_fill',
+                        'type': 'fill',
+                        'source': id,
+                        'paint': {
+                            'fill-color': sources[id].color,
+                            'fill-opacity': 0.8
+                        }
+                    });
+
+                    map.addLayer({
+                        'id': id + '_outline',
+                        'type': 'line',
+                        'source': id,
+                        'paint': {
+                            'line-color': '#000',
+                            'line-width': 1.5
+                        }
+                    });
+
+                    // Event saat klik poligon untuk dijadikan tujuan rute
+                    map.on('click', id + '_fill', (e) => {
+                        const centerOfPolygon = e.lngLat;
+                        directions.setDestination([centerOfPolygon.lng, centerOfPolygon.lat]);
+                    });
+
+                    // Mengubah cursor menjadi pointer saat mouse di atas poligon
+                    map.on('mouseenter', id + '_fill', () => {
+                        map.getCanvas().style.cursor = 'pointer';
+                    });
+                    map.on('mouseleave', id + '_fill', () => {
+                        map.getCanvas().style.cursor = '';
+                    });
+                }
+            });
+
+            // Fungsi tombol 'Lokasi Pesantren'
+            document.getElementById('fly').addEventListener('click', () => {
+                map.flyTo({
+                    ...end,
+                    duration: 3000,
+                    essential: true
+                });
+            });
+        </script>
+        
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    </body>
+</html>
